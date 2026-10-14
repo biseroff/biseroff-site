@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terminal First 20 users · biseroff</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400&family=Source+Serif+4:wght@400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/dashboards/style.css">
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav">
+    <a class="brand" href="/">biseroff</a>
+    <div class="links"><a href="/dashboards/">← Dashboards</a></div>
+  </nav>
+
+  <header class="head">
+    <div>
+      <h1>Terminal First 20 users <span class="scanned">updated <span id="updated">—</span></span></h1>
+      <div class="label" style="margin-top:6px">dashboard 01 · user conversations</div>
+    </div>
+    <div class="badge">
+      <div class="top"><span><span class="dot" id="dot"></span><span id="status">—</span></span><b id="badge-score">—</b></div>
+      <div class="bot"><span>biseroff</span><span>2026</span></div>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div>
+      <div class="big"><span class="n" id="big">0</span><span class="d">/ 100</span></div>
+      <div class="grade"><span class="g" id="grade">—</span><span id="grade-label">—</span></div>
+      <p class="summary" id="summary"></p>
+    </div>
+    <div class="actions">
+      <button id="focus-add">Add a user →</button>
+      <a href="/dashboards/">All dashboards →</a>
+    </div>
+  </div>
+
+  <div class="segs" id="segs"></div>
+  <div class="segs-lab"><span id="seg-left">0 of 20 users</span><span>5% per user conversation</span></div>
+
+  <div class="groupby">Group by <b>Goals</b><span>Layers</span><span>Status</span></div>
+
+  <div id="goals"></div>
+
+  <form class="addrow" id="addform" autocomplete="off">
+    <input id="name" placeholder="User name" maxlength="60" required>
+    <button type="submit" id="addbtn">Add user +5%</button>
+    <div class="hint" id="hint">Each user conversation adds 5%. The list is saved in this browser.</div>
+  </form>
+
+  <div class="foot">
+    <span>stored locally · key dash1.users</span>
+    <button id="reset" type="button">reset to seed (2 convos)</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var KEY="dash1.users", MAX=20, PER=5;
+  var SEED=[{name:"Convo 1",at:"2026-10-14"},{name:"Convo 2",at:"2026-10-14"}];
+  var GOALS=[
+    {t:"Land the first 5 users",     d:"Prove someone outside the team will sit through a full conversation with the terminal."},
+    {t:"Grow to 10 users",           d:"Repeatable onboarding. Second-hand referrals should start showing up here."},
+    {t:"Grow to 15 users",           d:"Patterns in what users ask for. Feedback starts to converge."},
+    {t:"Close out the first 20",     d:"Enough signal to decide what the terminal becomes next."}
+  ];
+
+  function load(){ try{var u=JSON.parse(localStorage.getItem(KEY)||"null"); if(Array.isArray(u)) return u;}catch(e){} return SEED.slice(); }
+  function save(u){ try{localStorage.setItem(KEY,JSON.stringify(u))}catch(e){} }
+  function tone(p){ return p>=70?"green":p>=35?"yellow":"red"; }
+  function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]}); }
+  function today(){ return new Date().toISOString().slice(0,10); }
+
+  var users=load(); var open={0:true};
+
+  function render(){
+    var n=Math.min(users.length,MAX), pct=n*PER, t=tone(pct);
+    var grade=pct>=100?"A+":pct>=80?"A":pct>=60?"B":pct>=40?"C":pct>=20?"D":"F";
+    var label=pct>=100?"Done":pct>=70?"Almost there":pct>=35?"Building momentum":n>0?"Getting started":"Not started";
+    var status=pct>=100?"COMPLETE":pct>=70?"ON TRACK":pct>=35?"IN PROGRESS":"EARLY";
+
+    var big=document.getElementById("big"); big.textContent=pct; big.className="n c-"+t;
+    document.getElementById("grade").textContent=grade; document.getElementById("grade").className="g c-"+t;
+    document.getElementById("grade-label").textContent=label; document.getElementById("grade-label").className="c-"+t;
+    document.getElementById("status").textContent=status;
+    document.getElementById("dot").className="dot bg-"+t;
+    var bs=document.getElementById("badge-score"); bs.textContent=pct+" "+grade; bs.className="c-"+t;
+    document.getElementById("updated").textContent=users.length?users[users.length-1].at:"—";
+    document.getElementById("seg-left").textContent=n+" of "+MAX+" users · "+(MAX-n)+" to go";
+    document.getElementById("summary").textContent=
+      n===0?"No conversations logged yet. Add the first user below to move the needle 5%.":
+      n>=MAX?"All 20 user conversations are in. The terminal has its first cohort.":
+      n+" user conversation"+(n>1?"s":"")+" done. "+(MAX-n)+" more to reach 20, "+(100-pct)+" points left.";
+
+    var segs=""; for(var i=0;i<MAX;i++) segs+='<i class="'+(i<n?"on bg-"+t:"")+'"></i>';
+    document.getElementById("segs").innerHTML=segs;
+
+    var html="";
+    GOALS.forEach(function(g,gi){
+      var lo=gi*5, hi=lo+5, slot=users.slice(lo,hi), done=slot.length;
+      var gp=done*20, gt=done===5?"green":done>0?"yellow":"red";
+      var tags=""; for(var k=0;k<5;k++){ var u=slot[k]; tags+='<span class="tag '+(u?gt:"dim")+'">'+(u?esc(u.name):"slot "+(lo+k+1))+'</span>'; }
+      var subs="";
+      for(var k=0;k<5;k++){
+        var idx=lo+k, u=users[idx];
+        subs+= u
+          ? '<div class="sub"><div class="name">'+esc(u.name)+'<small>'+esc(u.at)+'</small></div><div class="pts c-green">+'+PER+'%</div><button class="rm" data-i="'+idx+'" type="button">remove</button></div>'
+          : '<div class="sub empty"><div class="name">open slot '+(idx+1)+'</div><div class="pts muted">+'+PER+'%</div><span></span></div>';
+      }
+      html+='<section class="goal'+(open[gi]?" open":"")+'" data-g="'+gi+'">'
+        +'<div class="goal-h"><div><h3><em>'+(gi+1)+'.</em>'+esc(g.t)+'</h3><div class="tags">'+tags+'</div></div>'
+        +'<div class="r"><span class="c-'+gt+'">'+done+'/5</span><span class="chev">▼</span></div></div>'
+        +'<div class="goal-body"><p class="goal-desc">'+esc(g.d)+' Worth '+gp+'/100 of this goal.</p>'+subs+'</div></section>';
+    });
+    document.getElementById("goals").innerHTML=html;
+
+    var full=users.length>=MAX;
+    document.getElementById("addbtn").disabled=full;
+    document.getElementById("name").disabled=full;
+    document.getElementById("hint").textContent=full?"20 of 20 reached. Remove a user to add another.":"Each user conversation adds 5%. The list is saved in this browser.";
+  }
+
+  document.getElementById("goals").addEventListener("click",function(e){
+    var rm=e.target.closest(".rm");
+    if(rm){ var i=+rm.getAttribute("data-i"); if(confirm("Remove "+users[i].name+"?")){ users.splice(i,1); save(users); render(); } return; }
+    var h=e.target.closest(".goal-h"); if(h){ var gi=+h.parentElement.getAttribute("data-g"); open[gi]=!open[gi]; render(); }
+  });
+  document.getElementById("addform").addEventListener("submit",function(e){
+    e.preventDefault(); var inp=document.getElementById("name"), v=inp.value.trim();
+    if(!v||users.length>=MAX) return;
+    users.push({name:v,at:today()}); save(users); inp.value=""; open[Math.floor((users.length-1)/5)]=true; render(); inp.focus();
+  });
+  document.getElementById("focus-add").addEventListener("click",function(){ var i=document.getElementById("name"); i.scrollIntoView({behavior:"smooth",block:"center"}); i.focus(); });
+  document.getElementById("reset").addEventListener("click",function(){ if(confirm("Reset the list back to the 2 seed conversations?")){ users=SEED.slice(); save(users); render(); } });
+
+  render();
+})();
+</script>
+</body>
+</html>
