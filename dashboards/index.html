@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400&family=Source+Serif+4:wght@400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/dashboards/style.css">
+<script src="/dashboards/dash1-api.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -30,18 +31,14 @@
   </div>
 </div>
 <script>
-(function(){
-  // mirrors the dashboard's own storage so the tile shows live progress
-  var SEED=[{name:"Convo 1",at:"2026-10-14"},{name:"Convo 2",at:"2026-10-14"}];
-  var users; try{users=JSON.parse(localStorage.getItem("dash1.users")||"null")}catch(e){}
-  if(!Array.isArray(users)) users=SEED;
+Dash1.list().then(function(users){
   var n=Math.min(users.length,20), pct=n*5;
   var tone=pct>=70?"green":pct>=35?"yellow":"red";
   var t=document.querySelector('[data-dash="1"]');
   t.querySelector(".js-score").textContent=pct; t.querySelector(".js-score").className="js-score c-"+tone;
   t.querySelector(".js-count").textContent=n;
   var f=t.querySelector(".js-fill"); f.style.width=pct+"%"; f.className="js-fill bg-"+tone;
-})();
+}).catch(function(e){ document.querySelector('[data-dash="1"] .meta').textContent="could not load: "+e.message; });
 </script>
 </body>
 </html>

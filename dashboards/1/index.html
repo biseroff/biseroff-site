@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400&family=Source+Serif+4:wght@400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/dashboards/style.css">
+<script src="/dashboards/dash1-api.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -48,19 +49,18 @@
   <form class="addrow" id="addform" autocomplete="off">
     <input id="name" placeholder="User name" maxlength="60" required>
     <button type="submit" id="addbtn">Add user +5%</button>
-    <div class="hint" id="hint">Each user conversation adds 5%. The list is saved in this browser.</div>
+    <div class="hint" id="hint">Each user conversation adds 5%. The list is shared with everyone who opens this page.</div>
   </form>
 
   <div class="foot">
-    <span>stored locally · key dash1.users</span>
+    <span id="store">shared · supabase dash1_users</span>
     <button id="reset" type="button">reset to seed (2 convos)</button>
   </div>
 </div>
 
 <script>
 (function(){
-  var KEY="dash1.users", MAX=20, PER=5;
-  var SEED=[{name:"Convo 1",at:"2026-10-14"},{name:"Convo 2",at:"2026-10-14"}];
+  var MAX=20, PER=5;
   var GOALS=[
     {t:"Land the first 5 users",     d:"Prove someone outside the team will sit through a full conversation with the terminal."},
     {t:"Grow to 10 users",           d:"Repeatable onboarding. Second-hand referrals should start showing up here."},
@@ -68,13 +68,12 @@
     {t:"Close out the first 20",     d:"Enough signal to decide what the terminal becomes next."}
   ];
 
-  function load(){ try{var u=JSON.parse(localStorage.getItem(KEY)||"null"); if(Array.isArray(u)) return u;}catch(e){} return SEED.slice(); }
-  function save(u){ try{localStorage.setItem(KEY,JSON.stringify(u))}catch(e){} }
+  function fail(e){ var st=document.getElementById("store"); st.textContent="error · "+e.message; st.className="c-red"; console.error(e); }
+  function refresh(){ return Dash1.list().then(function(u){ users=u; render(); }).catch(fail); }
   function tone(p){ return p>=70?"green":p>=35?"yellow":"red"; }
   function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]}); }
-  function today(){ return new Date().toISOString().slice(0,10); }
 
-  var users=load(); var open={0:true};
+  var users=[]; var open={0:true}; var busy=false;
 
   function render(){
     var n=Math.min(users.length,MAX), pct=n*PER, t=tone(pct);
@@ -118,25 +117,26 @@
     document.getElementById("goals").innerHTML=html;
 
     var full=users.length>=MAX;
-    document.getElementById("addbtn").disabled=full;
+    document.getElementById("addbtn").disabled=full||busy;
     document.getElementById("name").disabled=full;
-    document.getElementById("hint").textContent=full?"20 of 20 reached. Remove a user to add another.":"Each user conversation adds 5%. The list is saved in this browser.";
+    document.getElementById("hint").textContent=full?"20 of 20 reached. Remove a user to add another.":"Each user conversation adds 5%. The list is shared with everyone who opens this page.";
   }
 
   document.getElementById("goals").addEventListener("click",function(e){
     var rm=e.target.closest(".rm");
-    if(rm){ var i=+rm.getAttribute("data-i"); if(confirm("Remove "+users[i].name+"?")){ users.splice(i,1); save(users); render(); } return; }
+    if(rm){ var i=+rm.getAttribute("data-i"); if(confirm("Remove "+users[i].name+"?")){ Dash1.remove(users[i].id).then(refresh).catch(fail); } return; }
     var h=e.target.closest(".goal-h"); if(h){ var gi=+h.parentElement.getAttribute("data-g"); open[gi]=!open[gi]; render(); }
   });
   document.getElementById("addform").addEventListener("submit",function(e){
     e.preventDefault(); var inp=document.getElementById("name"), v=inp.value.trim();
-    if(!v||users.length>=MAX) return;
-    users.push({name:v,at:today()}); save(users); inp.value=""; open[Math.floor((users.length-1)/5)]=true; render(); inp.focus();
+    if(!v||users.length>=MAX||busy) return;
+    busy=true; render();
+    Dash1.add(v).then(function(){ inp.value=""; open[Math.floor(users.length/5)]=true; }).catch(fail).then(function(){ busy=false; return refresh(); }).then(function(){ inp.focus(); });
   });
   document.getElementById("focus-add").addEventListener("click",function(){ var i=document.getElementById("name"); i.scrollIntoView({behavior:"smooth",block:"center"}); i.focus(); });
-  document.getElementById("reset").addEventListener("click",function(){ if(confirm("Reset the list back to the 2 seed conversations?")){ users=SEED.slice(); save(users); render(); } });
+  document.getElementById("reset").addEventListener("click",function(){ if(confirm("Reset the shared list back to the 2 seed conversations? This affects everyone.")){ Dash1.reset().then(refresh).catch(fail); } });
 
-  render();
+  render(); refresh();
 })();
 </script>
 </body>
