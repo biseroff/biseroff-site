@@ -6,7 +6,7 @@
 <title>Terminal observability loop · biseroff</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400&family=Source+Serif+4:wght@400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/dashboards/style.css?v=3">
+<link rel="stylesheet" href="/dashboards/style.css?v=4">
 <script src="/dashboards/dash2-api.js"></script>
 </head>
 <body>
@@ -19,7 +19,7 @@
   <header class="head">
     <div>
       <h1>Terminal observability loop <span class="scanned">updated <span id="updated">—</span></span></h1>
-      <div class="label" style="margin-top:6px">dashboard 02 · telemetry, signals, evals, change loop, the Eye</div>
+      <div class="label" style="margin-top:6px">dashboard 02 · traces, signals, evals, change loop, the Eye</div>
     </div>
     <div class="badge">
       <div class="top"><span><span class="dot" id="dot"></span><span id="status">—</span></span><b id="badge-score">—</b></div>
@@ -35,21 +35,12 @@
     </div>
     <div class="actions">
       <a href="#items">Suggestions →</a>
-      <a href="#tele">Telemetry →</a>
       <a href="/dashboards/">All dashboards →</a>
     </div>
   </div>
 
   <div class="cats" id="cats"></div>
 
-  <div class="sec-title" id="tele"><span>Terminal telemetry</span><span id="tele-src" class="muted">supabase · filings analyst</span></div>
-  <div class="tele" id="stats"></div>
-  <div class="tele2">
-    <div class="panel"><h4>Sessions per month <span class="c-green">■</span> sessions <span class="c-yellow">■</span> users</h4><div class="chart" id="chart"></div><div class="chart-leg" id="chart-leg"></div></div>
-    <div class="panel"><h4>Top tickers</h4><div id="tickers"></div></div>
-    <div class="panel"><h4>Rubric, avg of 5</h4><div id="dims"></div></div>
-  </div>
-  <p class="note" id="tele-note"></p>
 
   <div class="sec-title" id="items"><span>Suggestions, each worth a share of 100</span><span class="muted" id="done-count">—</span></div>
   <div class="groupby">Group by <b>Area</b><span>Status</span></div>
@@ -65,7 +56,7 @@
 (function(){
   var ORDER=["Usage telemetry","Traces","Signals","Evals","Simulations","Change loop","Model routing","Data layer","The Eye"];
   var DESC={
-    "Usage telemetry":"Who is using the terminal and how often. The panel above is this area, read live.",
+    "Usage telemetry":"Who is using the terminal and how often.",
     "Traces":"One record per step inside a session. Everything else on this page reads from these.",
     "Signals":"Rules over traces that flag the sessions worth a look.",
     "Evals":"A fixed question set scored with the existing rubric, run on every change.",
@@ -79,7 +70,6 @@
   function tone(p){ return p>=70?"green":p>=35?"yellow":"red"; }
   function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]}); }
   function fail(e){ var st=document.getElementById("store"); st.textContent="error · "+e.message; st.className="c-red"; console.error(e); }
-  function fmt(n){ return n==null?"—":Number(n).toLocaleString("en-US"); }
   function day(s){ return s?String(s).slice(0,10):"—"; }
 
   function renderItems(){
@@ -131,31 +121,6 @@
     document.getElementById("goals").innerHTML=html;
   }
 
-  function renderTele(t){
-    var stats=[
-      ["sessions",t.sessions,"sessions, all time"],["session_users",t.session_users,"users with a session"],
-      ["auth_users",t.auth_users,"accounts"],["signups",t.signups,"alpha signups"],
-      ["user_messages",t.user_messages,"user messages"],["tool_messages",t.tool_messages,"tool calls"],
-      ["grades",t.grades,"graded answers"],["avg_grade",t.avg_grade,"avg grade of 5"],
-      ["sessions_30d",t.sessions_30d,"sessions, 30d"],["users_30d",t.users_30d,"users, 30d"],["labs",t.labs,"labs"],["last",day(t.last_message),"last activity"]
-    ];
-    document.getElementById("stats").innerHTML=stats.map(function(s){
-      var cls=s[0]==="avg_grade"?(" c-"+(s[1]>=4?"green":s[1]>=3?"yellow":"red")):(s[0]==="sessions_30d"||s[0]==="users_30d")&&!s[1]?" c-red":"";
-      return '<div class="stat"><div class="v'+cls+'">'+(typeof s[1]==="number"?fmt(s[1]):esc(s[1]))+'</div><div class="k">'+esc(s[2])+'</div></div>';
-    }).join("");
-    var m=t.monthly||[], max=Math.max.apply(null,m.map(function(x){return x.s}).concat([1]));
-    document.getElementById("chart").innerHTML=m.map(function(x){
-      return '<div class="col" title="'+esc(x.m)+': '+x.s+' sessions, '+x.u+' users"><i style="height:'+Math.max(2,x.s*100/max)+'%"></i><i class="u" style="height:'+Math.max(1,x.u*100/max)+'%;margin-top:-'+Math.max(1,x.u*100/max)+'%;opacity:.95"></i><span>'+esc(String(x.m).slice(2))+'</span></div>';
-    }).join("")||'<span class="muted mono">no sessions</span>';
-    document.getElementById("chart-leg").textContent=m.length?"from "+day(t.first_session)+" to "+day(t.last_message)+", "+m.length+" months":"";
-    var tk=t.top_tickers||[], tmax=Math.max.apply(null,tk.map(function(x){return x.v}).concat([1]));
-    document.getElementById("tickers").innerHTML=tk.map(function(x){ return '<div class="kv"><span><span class="d"><i class="bg-green" style="width:'+(x.v*100/tmax)+'%"></i></span>'+esc(x.k)+'</span><span>'+x.v+'</span></div>'; }).join("")||'<span class="muted">none</span>';
-    var dims=t.dims||[];
-    document.getElementById("dims").innerHTML=dims.map(function(x){ var c=x.v>=4?"green":x.v>=3?"yellow":"red"; return '<div class="kv"><span><span class="d"><i class="bg-'+c+'" style="width:'+(x.v*20)+'%"></i></span>'+esc(String(x.k).replace(/_/g," "))+'</span><span class="c-'+c+'">'+x.v+'</span></div>'; }).join("")||'<span class="muted">no grades</span>';
-    var models=(t.models||[]).map(function(x){return x.k+" ("+x.v+")"}).join(", ");
-    document.getElementById("tele-note").textContent="Read live from the filings chat tables: "+fmt(t.messages)+" messages across "+fmt(t.sessions)+" sessions, graded answers ran on "+(models||"no model recorded")+". The desktop terminal does not write to this store yet, so recent-window counts stay at zero until it does. Signups and accounts come from the same project.";
-  }
-
   function refresh(){ return Dash2.items().then(function(r){ items=r; renderItems(); }).catch(fail); }
 
   document.getElementById("goals").addEventListener("click",function(e){
@@ -166,7 +131,6 @@
   });
 
   open[0]=true; renderItems(); refresh();
-  Dash2.telemetry().then(renderTele).catch(function(e){ document.getElementById("tele-note").textContent="telemetry unavailable: "+e.message; document.getElementById("tele-note").className="note c-red"; });
 })();
 </script>
 </body>

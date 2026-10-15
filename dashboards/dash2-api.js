@@ -1,4 +1,4 @@
-// Dashboard 2 store (Supabase, public.dash2_items + dash2_telemetry()). Publishable key; RLS limits anon to reading items and toggling done.
+// Dashboard 2 store (Supabase, public.dash2_items). Publishable key; RLS limits anon to reading items and toggling done.
 window.Dash2 = (function(){
   var BASE="https://fikcuycaejwjetemicnc.supabase.co/rest/v1";
   var KEY="sb_publishable_ZFv1nRtxc9gdoE8-b_PQ1g_7VJUMrlH";
@@ -11,7 +11,6 @@ window.Dash2 = (function(){
   }
   return {
     items: function(){ return req("GET",BASE+"/dash2_items?select=id,section,ord,title,advice,weight,done,done_at&order=id.asc"); },
-    setDone: function(id,done){ return req("PATCH",BASE+"/dash2_items?id=eq."+encodeURIComponent(id),{done:!!done,done_at:done?new Date().toISOString():null}); },
-    telemetry: function(){ return req("POST",BASE+"/rpc/dash2_telemetry",{}); }
+    setDone: function(id,done){ return req("PATCH",BASE+"/dash2_items?id=eq."+encodeURIComponent(id),{done:!!done,done_at:done?new Date().toISOString():null}); }
   };
 })();
