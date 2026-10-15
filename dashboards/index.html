@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400&family=Source+Serif+4:wght@400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/dashboards/style.css">
 <script src="/dashboards/dash1-api.js"></script>
+<script src="/dashboards/dash2-api.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -27,6 +28,13 @@
       <div class="bar"><i class="js-fill" style="width:0"></i></div>
       <div class="meta"><span class="js-count">—</span> of 20 user conversations · 5% each</div>
     </a>
+    <a class="tile" href="/dashboards/2/" data-dash="2">
+      <div class="num">02</div>
+      <h2>Terminal observability loop</h2>
+      <div class="score"><span class="js-score">—</span><small> / 100</small></div>
+      <div class="bar"><i class="js-fill" style="width:0"></i></div>
+      <div class="meta"><span class="js-count">—</span> suggestions marked done · telemetry, signals, evals, the Eye</div>
+    </a>
     <div class="tile ghost">+ next dashboard</div>
   </div>
 </div>
@@ -39,6 +47,14 @@ Dash1.list().then(function(users){
   t.querySelector(".js-count").textContent=n;
   var f=t.querySelector(".js-fill"); f.style.width=pct+"%"; f.className="js-fill bg-"+tone;
 }).catch(function(e){ document.querySelector('[data-dash="1"] .meta').textContent="could not load: "+e.message; });
+Dash2.items().then(function(items){
+  var total=0,done=0,nd=0; items.forEach(function(i){ total+=i.weight; if(i.done){ done+=i.weight; nd++; } });
+  var pct=Math.round(done*100/Math.max(total,1)), tone=pct>=70?"green":pct>=35?"yellow":"red";
+  var t=document.querySelector('[data-dash="2"]');
+  t.querySelector(".js-score").textContent=pct; t.querySelector(".js-score").className="js-score c-"+tone;
+  t.querySelector(".js-count").textContent=nd+" of "+items.length;
+  var f=t.querySelector(".js-fill"); f.style.width=pct+"%"; f.className="js-fill bg-"+tone;
+}).catch(function(e){ document.querySelector('[data-dash="2"] .meta').textContent="could not load: "+e.message; });
 </script>
 </body>
 </html>
